@@ -97,19 +97,39 @@ h2 {
 .workspace {
   display: grid;
   gap: 24px;
-  grid-template-columns: minmax(360px, 1.15fr) minmax(340px, 0.85fr);
+  grid-template-columns: minmax(360px, 1.15fr) minmax(360px, 1fr);
+  align-items: start;
   padding: 28px 40px 40px;
   max-width: 1440px;
   margin: 0 auto;
 }
 
-.input-panel,
+.input-panel {
+  background: #ffffff;
+  border: 1px solid #d8e1e7;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(18, 52, 59, 0.06);
+  padding: 24px;
+}
+
 .results-panel {
   background: #ffffff;
   border: 1px solid #d8e1e7;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(18, 52, 59, 0.06);
   padding: 24px;
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd6dc transparent;
+}
+
+.results-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-heading {
@@ -121,8 +141,7 @@ h2 {
 }
 
 .panel-heading p,
-.empty-state p,
-.explanation p {
+.empty-state p {
   color: #5d6d7e;
   line-height: 1.55;
   margin-bottom: 0;
@@ -263,45 +282,45 @@ select:focus {
 }
 
 /* ============================================================
-   RESULTS PANEL
+   SECTION 1: RESULTS SUMMARY CARDS
    ============================================================ */
 .result-summary {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
-.result-summary div {
+.summary-card {
   background: #f7fafc;
   border: 1px solid #dce6eb;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 94px;
-  padding: 14px;
+  min-height: 84px;
+  padding: 12px 14px;
 }
 
-.result-summary span {
+.summary-card span {
   color: #60717b;
   display: block;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   margin-bottom: 6px;
   text-transform: uppercase;
 }
 
-.result-summary strong {
+.summary-card strong {
   color: #17202a;
   display: block;
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
 
-/* Risk card styling */
+/* Risk card coloring */
 .risk-card.low {
   background: #edfbf3;
   border-color: #bbf0d2;
@@ -329,128 +348,255 @@ select:focus {
   color: #d92d20;
 }
 
-/* Explanation */
-.explanation {
-  border-bottom: 1px solid #dce6eb;
-  padding-bottom: 18px;
-}
-
-.explanation p {
-  color: #33444c;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.note {
-  background: #fff8e8;
-  border-left: 4px solid #f2a900;
-  border-radius: 4px;
-  color: #704d00 !important;
-  font-size: 0.82rem;
-  margin-top: 14px !important;
+/* ============================================================
+   SECTION 2: DATASET LABEL BANNER
+   ============================================================ */
+.demo-label-banner {
+  align-items: center;
+  background: #edf7ff;
+  border: 1px solid #bce0fd;
+  border-left: 4px solid #1976d2;
+  border-radius: 6px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
   padding: 10px 14px;
 }
 
-/* Contributing factors */
-.factors {
-  padding-top: 18px;
+.demo-label-banner.manual-mode {
+  background: #fff9ed;
+  border-color: #fbe2a7;
+  border-left-color: #d9822b;
+}
+
+.demo-badge {
+  background: #1976d2;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.demo-badge.manual {
+  background: #d9822b;
+}
+
+.demo-label-banner p {
+  color: #0b4f71;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.demo-label-banner.manual-mode p {
+  color: #7a4a00;
+}
+
+/* ============================================================
+   SECTION 3: AUTOMATED ML EXPLANATION SUMMARY
+   ============================================================ */
+.explanation-section {
+  margin-bottom: 14px;
+}
+
+.explanation-section h2 {
+  color: #12343b;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.explanation-card {
+  background: #f0f7f6;
+  border: 1px solid #bce3dc;
+  border-left: 5px solid #14505a;
+  border-radius: 8px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 6px rgba(18, 52, 59, 0.04);
+}
+
+.explanation-text {
+  color: #143238;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.65;
+  margin: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* ============================================================
+   SECTION 4: DISCLAIMER BANNER
+   ============================================================ */
+.disclaimer-banner {
+  align-items: center;
+  background: #fffdf5;
+  border: 1px solid #fae6b2;
+  border-left: 4px solid #f2a900;
+  border-radius: 6px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+}
+
+.disclaimer-badge {
+  background: #f2a900;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.disclaimer-banner p {
+  color: #704d00;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ============================================================
+   SECTION 5: IMPORTANT CONTRIBUTING FACTORS
+   ============================================================ */
+.factors-section {
+  border-top: 1px solid #e5ecef;
+  margin-bottom: 16px;
+  padding-top: 16px;
+}
+
+.factors-section h2 {
+  color: #17202a;
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin: 0 0 10px;
 }
 
 .factor-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
-.factor {
+.factor-card {
   background: #fafbfc;
   border: 1px solid #dce6eb;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 11px 14px;
+  transition: border-color 0.15s;
 }
 
-.factor div {
+.factor-card:hover {
+  border-color: #bcd0db;
+}
+
+.factor-content {
   align-items: center;
   display: flex;
   justify-content: space-between;
   gap: 12px;
 }
 
-.factor strong {
+.factor-name {
   color: #17202a;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   text-transform: capitalize;
 }
 
-.factor span {
-  color: #5a6e78;
-  font-size: 0.83rem;
+.factor-impact {
+  font-size: 0.8rem;
   font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
-/* Technical & Debug Expandables */
-details.technical {
+.factor-impact.impact-up {
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+}
+
+.factor-impact.impact-down {
+  background: #edfbf3;
+  border: 1px solid #bbf0d2;
+  color: #167a43;
+}
+
+/* ============================================================
+   SECTIONS 6 & 7: TECHNICAL & DEBUGGING DETAILS
+   ============================================================ */
+details.technical-details {
   background: #fafbfc;
   border: 1px solid #dce6eb;
   border-radius: 8px;
-  margin-top: 16px;
+  margin-top: 12px;
   overflow: hidden;
 }
 
-details.technical summary {
+details.technical-details summary {
   background: #f0f4f7;
   color: #1b3842;
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  padding: 12px 16px;
-  user-select: none;
+  padding: 11px 16px;
   transition: background 0.15s;
+  user-select: none;
 }
 
-details.technical summary:hover {
-  background: #e6edf2;
+details.technical-details summary:hover {
+  background: #e4edf2;
 }
 
-details.technical > p {
+.technical-body {
+  padding: 12px 14px 14px;
+}
+
+.technical-source {
   color: #5a6e78;
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   line-height: 1.5;
-  margin: 0;
-  padding: 12px 16px 4px;
+  margin: 0 0 10px;
 }
 
 .technical-grid {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  padding: 12px 16px 16px;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
-.technical-grid div {
+.technical-item {
   background: #ffffff;
   border: 1px solid #e1e8ed;
   border-radius: 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 3px;
+  padding: 8px 10px;
 }
 
-.technical-grid span {
+.tech-feat {
   color: #60717b;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.technical-grid strong {
+.tech-shap {
   color: #17202a;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
-.technical-grid em {
+.tech-val {
   color: #788892;
   font-size: 0.78rem;
   font-style: normal;
@@ -458,12 +604,11 @@ details.technical > p {
 
 .feature-table {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  padding: 12px 16px 16px;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
-.feature-table div {
+.feature-cell {
   align-items: center;
   background: #ffffff;
   border: 1px solid #e1e8ed;
@@ -471,20 +616,22 @@ details.technical > p {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 7px 10px;
 }
 
-.feature-table span {
+.feat-lbl {
   color: #495d68;
   font-size: 0.82rem;
 }
 
-.feature-table strong {
+.feat-val {
   color: #17202a;
   font-size: 0.86rem;
 }
 
-/* Empty State */
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
 .empty-state {
   align-content: center;
   display: grid;
@@ -503,7 +650,13 @@ details.technical > p {
 @media (max-width: 1100px) {
   .workspace {
     grid-template-columns: 1fr;
-    padding: 24px 20px;
+    padding: 20px 16px;
+  }
+
+  .results-panel {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 
@@ -511,7 +664,7 @@ details.technical > p {
   .topbar {
     align-items: stretch;
     flex-direction: column;
-    padding: 20px;
+    padding: 18px;
   }
 
   .status {
@@ -519,16 +672,12 @@ details.technical > p {
     white-space: normal;
   }
 
-  .workspace {
-    padding: 16px;
-  }
-
   .user-grid,
   .result-summary {
     grid-template-columns: 1fr;
   }
 
-  .factor div {
+  .factor-content {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;

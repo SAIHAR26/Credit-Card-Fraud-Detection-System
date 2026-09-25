@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
@@ -81,6 +81,7 @@ function App() {
   const [apiStatus, setApiStatus] = useState("Checking API");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const resultsRef = useRef(null);
 
   const isComplete = useMemo(
     () =>
@@ -163,7 +164,11 @@ function App() {
         throw new Error(typeof data.detail === "string" ? data.detail : "Prediction request failed.");
       }
 
-      setResult(await response.json());
+      const data = await response.json();
+      setResult(data);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -334,76 +339,107 @@ function App() {
           {error ? <p className="error">{error}</p> : null}
         </form>
 
-        <section className="results-panel" aria-live="polite">
+        <section className="results-panel" ref={resultsRef} aria-live="polite">
           {result ? (
-            <>
+            <div className="results-content">
+              {/* 1. Fraud Probability / Risk Level / Prediction */}
               <div className="result-summary">
-                <div>
+                <div className="summary-card">
                   <span>Fraud Probability</span>
                   <strong>{formatPercent(result.fraud_probability)}</strong>
                 </div>
-                <div className={`risk-card ${riskClass(result.risk_level)}`}>
+                <div className={`summary-card risk-card ${riskClass(result.risk_level)}`}>
                   <span>Risk Level</span>
                   <strong>{result.risk_level}</strong>
                 </div>
-                <div>
+                <div className="summary-card">
                   <span>Prediction</span>
                   <strong>{result.prediction_label}</strong>
                 </div>
               </div>
 
+              {/* 2. Actual dataset label for demo samples */}
               {actualLabel ? (
-                <p className="sample-note">Actual dataset label for this demo sample: {actualLabel}</p>
-              ) : null}
+                <div className="demo-label-banner">
+                  <span className="demo-badge">Dataset Ground Truth</span>
+                  <p>
+                    Actual dataset label for this demo sample: <strong>{actualLabel}</strong>
+                  </p>
+                </div>
+              ) : (
+                <div className="demo-label-banner manual-mode">
+                  <span className="demo-badge manual">Demo / Test Mode</span>
+                  <p>
+                    Manual transaction evaluated in demo/test mode (cardholder history features use training-set medians).
+                  </p>
+                </div>
+              )}
 
-              <div className="explanation">
+              {/* 3. Automated ML Explanation Summary */}
+              <div className="explanation-section">
                 <h2>Automated ML Explanation Summary</h2>
-                <p>{result.explanation}</p>
-                <p className="note">
+                <div className="explanation-card">
+                  <p className="explanation-text">{result.explanation}</p>
+                </div>
+              </div>
+
+              {/* 4. Disclaimer */}
+              <div className="disclaimer-banner">
+                <span className="disclaimer-badge">Disclaimer</span>
+                <p>
                   This is a model prediction and application-defined risk estimate, not proof that fraud occurred.
                 </p>
               </div>
 
-              <div className="factors">
+              {/* 5. Important Contributing Factors */}
+              <div className="factors-section">
                 <h2>Important Contributing Factors</h2>
                 <div className="factor-list">
                   {result.top_factors.map((factor) => (
-                    <article key={factor.feature} className="factor">
-                      <div>
-                        <strong>{factor.feature_label}</strong>
-                        <span>{factor.impact}</span>
+                    <article key={factor.feature} className="factor-card">
+                      <div className="factor-content">
+                        <strong className="factor-name">{factor.feature_label}</strong>
+                        <span className={`factor-impact ${factor.shap_value > 0 ? "impact-up" : "impact-down"}`}>
+                          {factor.impact}
+                        </span>
                       </div>
                     </article>
                   ))}
                 </div>
               </div>
 
-              <details className="technical">
+              {/* 6. Technical Explanation */}
+              <details className="technical-details">
                 <summary>Technical Explanation</summary>
-                <p>{result.feature_source}</p>
-                <div className="technical-grid">
-                  {result.top_factors.map((factor) => (
-                    <div key={factor.feature}>
-                      <span>{factor.feature}</span>
-                      <strong>SHAP {Number(factor.shap_value).toFixed(4)}</strong>
-                      <em>Value {formatNumber(factor.feature_value)}</em>
-                    </div>
-                  ))}
+                <div className="technical-body">
+                  <p className="technical-source">{result.feature_source}</p>
+                  <div className="technical-grid">
+                    {result.top_factors.map((factor) => (
+                      <div key={factor.feature} className="technical-item">
+                        <span className="tech-feat">{factor.feature}</span>
+                        <strong className="tech-shap">SHAP {Number(factor.shap_value).toFixed(4)}</strong>
+                        <em className="tech-val">Value {formatNumber(factor.feature_value)}</em>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </details>
 
-              <details className="technical">
+              {/* 7. Advanced / Debugging Mode */}
+              <details className="technical-details debugging-details">
                 <summary>Advanced / Debugging Mode - internal model features</summary>
-                <div className="feature-table">
-                  {Object.entries(result.model_features).map(([feature, value]) => (
-                    <div key={feature}>
-                      <span>{MODEL_FEATURE_LABELS[feature] || feature}</span>
-                      <strong>{formatNumber(value)}</strong>
-                    </div>
-                  ))}
+                <div className="technical-body">
+                  <div className="feature-table">
+                    {Object.entries(result.model_features).map(([feature, value]) => (
+                      <div key={feature} className="feature-row">
+                        <span className="feature-name">{MODEL_FEATURE_LABELS[feature] || feature}</span>
+                        <strong className="feature-val">{formatNumber(value)}</strong>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </details>
-            </>
+            </div>
           ) : (
             <div className="empty-state">
               <h2>No prediction yet</h2>
