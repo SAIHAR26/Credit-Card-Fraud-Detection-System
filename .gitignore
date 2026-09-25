@@ -4,8 +4,12 @@ __pycache__/
 .env
 .ipynb_checkpoints/
 data/raw/
+data/processed/
+!data/processed/.gitkeep
 data/external/
 models/*.pkl
 models/*.joblib
 .tmp/
 .matplotlib/
+app/frontend/node_modules/
+app/frontend/dist/
