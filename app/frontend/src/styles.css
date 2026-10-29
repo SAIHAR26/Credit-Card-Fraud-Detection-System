@@ -216,6 +216,37 @@ button:disabled {
   padding: 10px 14px;
 }
 
+.history-panel {
+  background: #f7fafc;
+  border: 1px solid #d8e1e7;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.history-panel > p {
+  color: #5d6d7e;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+
+.history-toggle {
+  align-items: center;
+  flex-direction: row;
+  gap: 9px;
+}
+
+.history-toggle input {
+  accent-color: #14505a;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.history-toggle span {
+  font-size: 0.88rem;
+}
+
 /* ============================================================
    FORM FIELDS & INPUT GRID
    ============================================================ */

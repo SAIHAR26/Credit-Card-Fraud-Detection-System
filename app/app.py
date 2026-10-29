@@ -1,6 +1,7 @@
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
+import random
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -79,6 +80,10 @@ class UserTransactionInput(BaseModel):
     transaction_date: date
     hour: int = Field(..., ge=0, le=23)
     age: float = Field(..., ge=18, le=100)
+    previous_amount: Optional[float] = Field(None, ge=0)
+    previous_transaction_count: Optional[int] = Field(None, ge=0)
+    historical_avg_amount: Optional[float] = Field(None, ge=0)
+    time_since_previous_hours: Optional[float] = Field(None, ge=0)
 
 
 TransactionInput = create_model(
@@ -240,6 +245,16 @@ def build_manual_model_features(transaction: UserTransactionInput) -> Dict[str, 
         }
     )
 
+    history_values = {
+        "previous_amount": transaction.previous_amount,
+        "previous_transaction_count": transaction.previous_transaction_count,
+        "historical_avg_amount": transaction.historical_avg_amount,
+        "time_since_previous_hours": transaction.time_since_previous_hours,
+    }
+    for feature, value in history_values.items():
+        if value is not None:
+            model_features[feature] = float(value)
+
     model_features["amount_deviation"] = (
         model_features["amt"] - model_features["historical_avg_amount"]
     )
@@ -297,9 +312,7 @@ def get_sample_by_label(label: Optional[int] = None) -> Dict[str, Any]:
     processed = get_processed_test_data()
 
     if label is None:
-        row_index = 0
-    elif label == 1:
-        row_index = 1767
+        row_index = random.randrange(len(processed))
     else:
         matches = processed.index[processed["is_fraud"].eq(label)]
         if len(matches) == 0:
@@ -307,7 +320,7 @@ def get_sample_by_label(label: Optional[int] = None) -> Dict[str, Any]:
                 status_code=404,
                 detail=f"No test sample found for label {label}.",
             )
-        row_index = int(matches[0])
+        row_index = int(random.choice(matches.tolist()))
 
     processed_row = processed.iloc[row_index]
     raw_row = get_raw_test_sorted().iloc[row_index]
@@ -386,14 +399,28 @@ def predict(transaction: TransactionInput):
 @app.post("/predict-user", response_model=PredictionResponse)
 def predict_user(transaction: UserTransactionInput):
     model_features = build_manual_model_features(transaction)
+    has_history = any(
+        value is not None
+        for value in (
+            transaction.previous_amount,
+            transaction.previous_transaction_count,
+            transaction.historical_avg_amount,
+            transaction.time_since_previous_hours,
+        )
+    )
 
     return create_prediction_response(
         model_features,
         (
             "User input demo/test mode: readable fields were encoded with the training "
-            "categorical mappings. Historical behavior and merchant-distance features "
-            "use training-set medians because no real cardholder history is available "
-            "for a manual entry."
+            "categorical mappings. "
+            + (
+                "Supplied prior-transaction history was used; merchant distance and any "
+                "history values left blank use training-set medians."
+                if has_history
+                else "History and merchant-distance features use training-set medians "
+                "because no prior history was supplied."
+            )
         ),
     )
 

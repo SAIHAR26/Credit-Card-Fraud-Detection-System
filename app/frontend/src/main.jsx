@@ -2,7 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+
+async function readApiResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      response.ok
+        ? "The API returned an unexpected response. Check that the backend is running."
+        : `API request failed (${response.status}). Check that the backend is running.`,
+    );
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(typeof data.detail === "string" ? data.detail : "API request failed.");
+  }
+  return data;
+}
 
 const DEFAULT_FORM = {
   amt: "",
@@ -14,6 +31,10 @@ const DEFAULT_FORM = {
   transaction_date: "2020-06-21",
   hour: "",
   age: "",
+  previous_amount: "",
+  previous_transaction_count: "",
+  historical_avg_amount: "",
+  time_since_previous_hours: "",
 };
 
 const MODEL_FEATURE_LABELS = {
@@ -67,6 +88,7 @@ function riskClass(risk) {
 
 function App() {
   const [form, setForm] = useState(DEFAULT_FORM);
+  const [historyEnabled, setHistoryEnabled] = useState(false);
   const [options, setOptions] = useState({
     categories: [],
     genders: [],
@@ -83,22 +105,29 @@ function App() {
   const [loading, setLoading] = useState(false);
   const resultsRef = useRef(null);
 
-  const isComplete = useMemo(
-    () =>
-      ["amt", "merchant", "category", "gender", "state", "city_pop", "transaction_date", "hour", "age"].every(
-        (key) => String(form[key] ?? "").trim() !== "",
-      ),
-    [form],
-  );
+  const isComplete = useMemo(() => {
+    const requiredFields = [
+      "amt", "merchant", "category", "gender", "state", "city_pop", "transaction_date", "hour", "age",
+    ];
+    if (historyEnabled) {
+      requiredFields.push(
+        "previous_amount",
+        "previous_transaction_count",
+        "historical_avg_amount",
+        "time_since_previous_hours",
+      );
+    }
+    return requiredFields.every((key) => String(form[key] ?? "").trim() !== "");
+  }, [form, historyEnabled]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/`)
-      .then((response) => response.json())
+      .then(readApiResponse)
       .then((data) => setApiStatus(`${data.model} ready`))
       .catch(() => setApiStatus("API offline"));
 
     fetch(`${API_BASE_URL}/input-options`)
-      .then((response) => response.json())
+      .then(readApiResponse)
       .then((data) => setOptions(data))
       .catch(() => setError("Unable to load input options from the API."));
   }, []);
@@ -117,16 +146,17 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/${endpoint}`);
       if (!response.ok) {
-        throw new Error(`Unable to load ${label.toLowerCase()}.`);
+        await readApiResponse(response);
       }
 
-      const data = await response.json();
+      const data = await readApiResponse(response);
       setForm({
         ...DEFAULT_FORM,
         ...Object.fromEntries(
           Object.entries(data.user_input).map(([key, value]) => [key, String(value)]),
         ),
       });
+      setHistoryEnabled(false);
       setSampleFeatures(data.transaction);
       setSampleLabel(`${label}: ${data.actual_label_text} test dataset row`);
       setActualLabel(data.actual_label_text);
@@ -143,14 +173,29 @@ function App() {
 
     try {
       const endpoint = sampleFeatures ? "predict-demo" : "predict-user";
+      const {
+        previous_amount,
+        previous_transaction_count,
+        historical_avg_amount,
+        time_since_previous_hours,
+        ...baseForm
+      } = form;
       const payload = sampleFeatures
         ? sampleFeatures
         : {
-            ...form,
+            ...baseForm,
             amt: Number(form.amt),
             city_pop: Number(form.city_pop),
             hour: Number(form.hour),
             age: Number(form.age),
+            ...(historyEnabled
+              ? {
+                  previous_amount: Number(previous_amount),
+                  previous_transaction_count: Number(previous_transaction_count),
+                  historical_avg_amount: Number(historical_avg_amount),
+                  time_since_previous_hours: Number(time_since_previous_hours),
+                }
+              : {}),
           };
 
       const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
@@ -159,12 +204,7 @@ function App() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(typeof data.detail === "string" ? data.detail : "Prediction request failed.");
-      }
-
-      const data = await response.json();
+      const data = await readApiResponse(response);
       setResult(data);
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -325,10 +365,75 @@ function App() {
             </label>
           </div>
 
+          <div className="history-panel">
+            <label className="history-toggle">
+              <input
+                type="checkbox"
+                checked={historyEnabled}
+                onChange={(event) => {
+                  setHistoryEnabled(event.target.checked);
+                  setSampleFeatures(null);
+                  setSampleLabel("");
+                  setActualLabel(null);
+                }}
+              />
+              <span>Include previous transaction history</span>
+            </label>
+            {historyEnabled ? (
+              <>
+                <p>Enter the card's history before this transaction. These values are sent to the model.</p>
+                <div className="user-grid">
+                  <label>
+                    <span>Previous transaction amount</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.previous_amount}
+                      onChange={(event) => updateValue("previous_amount", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Previous transaction count</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.previous_transaction_count}
+                      onChange={(event) => updateValue("previous_transaction_count", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Historical average amount</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.historical_avg_amount}
+                      onChange={(event) => updateValue("historical_avg_amount", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Hours since previous transaction</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.time_since_previous_hours}
+                      onChange={(event) => updateValue("time_since_previous_hours", event.target.value)}
+                    />
+                  </label>
+                </div>
+              </>
+            ) : (
+              <p>Optional. If left off, the app uses training-set median values for history features.</p>
+            )}
+          </div>
+
           {!sampleFeatures ? (
             <p className="demo-mode">
-              Manual entries run in demo/test mode. The backend uses training-set medians for unavailable
-              cardholder history and merchant-distance features instead of pretending real history exists.
+              Manual entries run in demo/test mode. Supplied history is used; any unavailable history values
+              and merchant-distance features use training-set medians.
             </p>
           ) : null}
 
@@ -370,7 +475,7 @@ function App() {
                 <div className="demo-label-banner manual-mode">
                   <span className="demo-badge manual">Demo / Test Mode</span>
                   <p>
-                    Manual transaction evaluated in demo/test mode (cardholder history features use training-set medians).
+                    Manual transaction evaluated in demo/test mode. Supplied history fields are used; any missing history fields use training-set medians.
                   </p>
                 </div>
               )}
